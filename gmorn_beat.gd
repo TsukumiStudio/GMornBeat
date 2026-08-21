@@ -56,9 +56,20 @@ func _process(delta: float) -> void:
 			scaler.call("pulse")
 
 ## 鳴らしている再生ノードを教える。曲を差し替えたら `reset()` も呼ぶ。
+##
+## `null` を渡してはいけない。渡すと拍は曲の位置ではなく経過時間で刻まれる。
+## 速さは合ったままなので拍動は動いて見え、**位相だけが黙ってずれる**。
+## 実際に、再生ノードを作る前にここへ渡していて0.20秒ぶん先行したことがある。
+## 気付けるように声を上げる。
 func set_source(player: AudioStreamPlayer) -> void:
+	if player == null:
+		push_error("GMornBeat.set_source() に再生ノードが渡されていない。拍が曲ではなく経過時間で刻まれる")
 	_player = player
 	reset()
+
+## いま拍を読んでいる再生ノード。つなぎ忘れを外から見るために出す。
+func source() -> AudioStreamPlayer:
+	return _player
 
 ## 速さと分割数を教える。曲が変わるたびに呼ぶ。
 func set_tempo(new_bpm: float, new_measure_tick: int) -> void:
