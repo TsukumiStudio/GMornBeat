@@ -102,3 +102,12 @@ beat.ticks_per_pulse = 4    # 1小節8分割なら半小節ごと
 ## ライセンス
 
 Unlicense（パブリックドメイン）。
+
+## UI拍動のON/OFF
+
+「プロジェクト設定 → GMorn Beat → UI Pulse Enabled」で一括切り替えする。
+保存キーは `gmorn_beat/ui_pulse_enabled`。アドオンの既定値はON（未設定時もON）。
+OFFにしても時計の更新と `beat` シグナルは続き、UIグループへの `pulse()` だけを停止する。
+個別UIのscalerや `beat_scale_enabled` は有効のまま使う。
+設定変更後、次のゲーム実行に反映される。実行中に `ProjectSettings.set_setting()` で変更した場合も次の拍から反映する。
+既に拡大しているUIは通常の補間で元のサイズへ戻る。

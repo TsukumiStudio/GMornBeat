@@ -20,6 +20,7 @@ extends Node
 const SCALE := preload("gmorn_beat_scale.gd")
 ## 拍動するものが入る群れ。
 const GROUP := SCALE.GROUP
+const UI_PULSE_SETTING := "gmorn_beat/ui_pulse_enabled"
 
 ## 拍を打ったときに出る。`index` は数え始めからの通し番号。
 signal beat(index: int)
@@ -51,6 +52,12 @@ func _process(delta: float) -> void:
 		return
 	_index = next_index
 	beat.emit(next_index)
+	_pulse_ui()
+
+## 時計とbeat通知は維持し、UIへの拍動指示だけを切り替える。
+func _pulse_ui() -> void:
+	if not bool(ProjectSettings.get_setting(UI_PULSE_SETTING, true)):
+		return
 	for scaler: Node in get_tree().get_nodes_in_group(GROUP):
 		if scaler.has_method("pulse"):
 			scaler.call("pulse")

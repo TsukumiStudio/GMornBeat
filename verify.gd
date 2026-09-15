@@ -43,6 +43,21 @@ func _run() -> void:
 	assert(scaler.pivot_offset.is_equal_approx(scaler.size / 2.0),
 		"軸が %s（中心は %s）" % [str(scaler.pivot_offset), str(scaler.size / 2.0)])
 
+	# 未設定時はON。OFFでも時計は進み、ONへ戻すと再び拡大する。
+	assert(not ProjectSettings.has_setting(beat.UI_PULSE_SETTING))
+	beat._pulse_ui()
+	assert(scaler.scale.x > 1.0)
+	scaler.scale = Vector2.ONE
+	scaler.beat_scale = Vector2.ONE
+	ProjectSettings.set_setting(beat.UI_PULSE_SETTING, false)
+	beat._advance(0.1)
+	beat._pulse_ui()
+	assert(beat.clock() > 0.0)
+	assert(scaler.scale == Vector2.ONE, "OFFでも拍動する")
+	ProjectSettings.set_setting(beat.UI_PULSE_SETTING, true)
+	beat._pulse_ui()
+	assert(scaler.scale.x > 1.0, "ONでも拍動しない")
+
 	# 短辺を基準に補正する。横長のものが横だけ伸びると形が崩れる。
 	scaler.pulse()
 	var grew := scaler.scale
