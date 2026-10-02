@@ -14,8 +14,9 @@ godot_bin=${GODOT_BIN:-$(command -v godot 2>/dev/null || echo /Applications/Godo
 work_dir=$(mktemp -d)
 trap 'rm -rf "$work_dir"' EXIT
 
-mkdir -p "$work_dir/addons/gmorn_beat"
+mkdir -p "$work_dir/addons/gmorn_beat/tests"
 cp "$addon_dir"/*.gd "$addon_dir"/plugin.cfg "$work_dir/addons/gmorn_beat/"
+cp "$addon_dir/tests/test_override_beat.gd" "$work_dir/addons/gmorn_beat/tests/"
 cp "$addon_dir/verify.gd" "$work_dir/verify.gd"
 # 部品の中の相対参照に合わせるため、確認用の読み込み先も addons/ を指す。
 sed -i '' 's|res://gmorn_|res://addons/gmorn_beat/gmorn_|g' "$work_dir/verify.gd" 2>/dev/null \
@@ -35,4 +36,5 @@ config/features=PackedStringArray("4.7")
 
 PROJECT
 
-"$godot_bin" --headless --path "$work_dir" --script verify.gd
+"$godot_bin" --headless --audio-driver Dummy --path "$work_dir" --script verify.gd
+"$godot_bin" --headless --audio-driver Dummy --path "$work_dir" --script res://addons/gmorn_beat/tests/test_override_beat.gd

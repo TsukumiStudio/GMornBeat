@@ -24,6 +24,8 @@ const UI_PULSE_SETTING := "gmorn_beat/ui_pulse_enabled"
 
 ## 拍を打ったときに出る。`index` は数え始めからの通し番号。
 signal beat(index: int)
+## An authored pulse from a registered source. Normal clock/beat stay unchanged.
+signal override_beat(source_tick: int)
 
 ## 1小節の分割数。譜面の刻みの細かさに合わせる。
 var measure_tick := 8
@@ -37,6 +39,8 @@ var _clock := 0.0
 var _last_position := 0.0
 var _elapsed_loops := 0.0
 var _index := 0
+var _override_tokens: Dictionary = {}
+var _next_override_token := 1
 
 func _process(delta: float) -> void:
 	# 画面の無い動かし方では拍動させない。見えないものを動かす意味が無く、
@@ -51,8 +55,33 @@ func _process(delta: float) -> void:
 	if next_index == _index:
 		return
 	_index = next_index
-	beat.emit(next_index)
+	_notify_regular_beat(next_index)
+
+func _notify_regular_beat(beat_index: int) -> void:
+	beat.emit(beat_index)
+	if not is_overriding_beat():
+		_pulse_ui()
+
+## Register only for the lifetime of the authored pulse source. Tokens are never
+## reused, so a callback retained from an earlier visit cannot affect the next.
+func register_override_beat() -> int:
+	var token := _next_override_token
+	_next_override_token += 1
+	_override_tokens[token] = true
+	return token
+
+func unregister_override_beat(token: int) -> bool:
+	return _override_tokens.erase(token)
+
+func notify_override_beat(token: int, source_tick: int) -> bool:
+	if source_tick < 0 or not _override_tokens.has(token):
+		return false
+	override_beat.emit(source_tick)
 	_pulse_ui()
+	return true
+
+func is_overriding_beat() -> bool:
+	return not _override_tokens.is_empty()
 
 ## 時計とbeat通知は維持し、UIへの拍動指示だけを切り替える。
 func _pulse_ui() -> void:

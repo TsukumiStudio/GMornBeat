@@ -91,6 +91,56 @@ beat.ticks_per_pulse = 4    # 1小節8分割なら半小節ごと
 | `tick_duration()` | 刻み1つの長さ（秒） |
 | `pulse_duration()` | 打つ間隔（秒） |
 
+## Authored beat override API
+
+An external beat source can temporarily take ownership of UI pulse timing while
+GMornBeat continues to maintain its normal music clock and `beat` signal. This is
+useful when a score, sequencer, or other authored timeline has pulse positions
+that do not follow the regular tempo grid.
+
+Register each source for its active lifetime and keep the returned token:
+
+```gdscript
+var override_token := 0
+
+func begin_authored_pulses() -> void:
+    override_token = GMornBeat.register_override_beat()
+
+func publish_authored_pulse(source_tick: int) -> void:
+    if override_token != 0:
+        GMornBeat.notify_override_beat(override_token, source_tick)
+
+func end_authored_pulses() -> void:
+    if override_token != 0:
+        GMornBeat.unregister_override_beat(override_token)
+        override_token = 0
+```
+
+| API | Contract |
+| --- | --- |
+| `register_override_beat() -> int` | Returns a positive owner token. Tokens are never reused during the node's lifetime. Multiple owners may be active together. |
+| `unregister_override_beat(token) -> bool` | Cancels that owner. Returns `false` for an unknown or already-cancelled token. Regular UI pulses resume after the final owner cancels. |
+| `notify_override_beat(token, source_tick) -> bool` | Emits `override_beat(source_tick)` and requests one UI pulse. Returns `false` for a stale token or a negative tick. |
+| `is_overriding_beat() -> bool` | Reports whether at least one owner is registered. |
+| `override_beat(source_tick)` | Signal emitted for an accepted authored pulse. It is emitted even when UI pulses are disabled in project settings. |
+
+While any owner is registered, regular clock updates and the regular `beat`
+signal continue unchanged; only the regular UI-group `pulse()` call is
+suppressed. Accepted authored notifications use that same UI pulse route. The
+`gmorn_beat/ui_pulse_enabled` setting controls both regular and authored UI
+pulses, but it does not suppress either signal and does not change `clock()` or
+`index()`.
+
+Always unregister when the source stops or is replaced. A cancelled token stays
+invalid, so a callback retained by an earlier source lifetime cannot publish in
+a later one. Each owner must cancel its own token; cancelling one owner does not
+affect other active owners.
+
+`tests/test_override_beat.gd` is a standalone pure-logic contract test for this
+API. It covers multiple owners, cancellation, stale tokens, regular signal
+continuity, UI-only switching, and unchanged music-clock state without starting
+audio or rendering.
+
 ### 手を入れる
 
 `verify.sh` で、拍の計算と拍動の割り当てが通ることを確かめられる。一時の置き場へ最小のプロジェクトを作り、この部品を写して回す。
